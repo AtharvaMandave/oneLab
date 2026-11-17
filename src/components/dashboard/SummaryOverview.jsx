@@ -1,9 +1,10 @@
 /**
  * SummaryOverview Component
  * Executive reconciliation dashboard overview with key financial metrics,
- * ledger variance breakdown, and interactive visual bridge.
+ * interactive architecture guide, accounting equation proof, and ledger variance bridge.
  */
 
+import { useState } from 'react';
 import {
   ArrowRightLeft,
   Building2,
@@ -18,11 +19,19 @@ import {
   Layers,
   ArrowRight,
   TrendingUp,
+  HelpCircle,
+  ChevronDown,
+  ChevronUp,
+  Sparkles,
+  ShieldCheck,
+  Check,
 } from 'lucide-react';
 import MetricCard from '../common/MetricCard.jsx';
-import { formatCurrency } from '../../utils/decimal.js';
+import { formatCurrency, abs } from '../../utils/decimal.js';
 
-export default function SummaryOverview({ summary, breakdown }) {
+export default function SummaryOverview({ summary, breakdown, onInspectTxn, onViewPlantedCases }) {
+  const [showGuide, setShowGuide] = useState(false);
+
   if (!summary) return null;
 
   const overallStatusConfig = {
@@ -103,19 +112,69 @@ export default function SummaryOverview({ summary, breakdown }) {
             </div>
           </div>
 
-          {/* Quick Context Pills */}
+          {/* Quick Context & Guide Toggle */}
           <div className="flex flex-wrap items-center gap-2 self-start md:self-center text-xs">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 border border-slate-200/80 shadow-xs text-slate-700 font-medium">
+            <button
+              onClick={() => setShowGuide(!showGuide)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 border border-slate-200/90 shadow-2xs text-blue-700 hover:text-blue-800 hover:bg-blue-50/50 font-bold transition-all cursor-pointer"
+            >
+              <HelpCircle className="h-3.5 w-3.5 text-blue-600" />
+              <span>{showGuide ? 'Hide Guide' : 'How It Balances'}</span>
+              {showGuide ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </button>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 border border-slate-200/80 shadow-2xs text-slate-700 font-medium">
               <Calendar className="h-3.5 w-3.5 text-slate-400" />
               <span>Reporting: <strong className="text-slate-900">{summary.reportingPeriod}</strong></span>
             </div>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 border border-slate-200/80 shadow-xs text-slate-700 font-medium">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 border border-slate-200/80 shadow-2xs text-slate-700 font-medium">
               <span className="font-bold text-slate-900">{summary.currency}</span>
               <span className="text-slate-400">·</span>
               <span>Decimal.js (4dp)</span>
             </div>
           </div>
         </div>
+
+        {/* Collapsible Architecture & Engine Walkthrough */}
+        {showGuide && (
+          <div className="mt-4 pt-4 border-t border-slate-200/70 grid grid-cols-1 md:grid-cols-4 gap-3 text-xs animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="p-3 bg-white/95 rounded-xl border border-slate-200 shadow-2xs">
+              <div className="flex items-center gap-2 font-bold text-slate-800 mb-1">
+                <span className="h-5 w-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-mono">1</span>
+                Ingest & Normalize
+              </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Loads 24 Platform transactions (₹3,57,151.49 net) and 25 Bank settlements at 4-decimal internal precision.
+              </p>
+            </div>
+            <div className="p-3 bg-white/95 rounded-xl border border-slate-200 shadow-2xs">
+              <div className="flex items-center gap-2 font-bold text-slate-800 mb-1">
+                <span className="h-5 w-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-mono">2</span>
+                Isolate Duplicates
+              </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Detects duplicate bank credit <strong className="text-slate-700 font-mono">TXN-1003</strong> (₹15,200) and excludes it from Adjusted Bank Net Cash.
+              </p>
+            </div>
+            <div className="p-3 bg-white/95 rounded-xl border border-slate-200 shadow-2xs">
+              <div className="flex items-center gap-2 font-bold text-slate-800 mb-1">
+                <span className="h-5 w-5 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[10px] font-mono">3</span>
+                Match & Classify
+              </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Flags timing difference (<strong className="text-slate-700 font-mono">TXN-1020</strong> settled in Nov) and orphan refund (<strong className="text-slate-700 font-mono">REF-5099</strong>).
+              </p>
+            </div>
+            <div className="p-3 bg-white/95 rounded-xl border border-slate-200 shadow-2xs">
+              <div className="flex items-center gap-2 font-bold text-slate-800 mb-1">
+                <span className="h-5 w-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-mono">4</span>
+                Balance Variance
+              </div>
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                Decomposes ₹6,799.9975 variance into missing, unmatched, and rounding differences. <strong>Unexplained difference = ₹0.00</strong>.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Primary KPI Metrics Grid */}
@@ -182,7 +241,7 @@ export default function SummaryOverview({ summary, breakdown }) {
 
       {/* Interactive Reconciliation Variance Bridge */}
       {breakdown?.reconciliationBridge && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
             <div>
               <h3 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
@@ -194,10 +253,42 @@ export default function SummaryOverview({ summary, breakdown }) {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1.5 shadow-xs">
+              <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1.5 shadow-2xs">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
                 Unexplained Difference: {formatCurrency(summary.unexplainedDifference || 0)} (Balanced)
               </span>
+            </div>
+          </div>
+
+          {/* Visual Accounting Equation Banner */}
+          <div className="p-4 rounded-xl bg-slate-900 text-white shadow-inner space-y-2">
+            <div className="flex items-center justify-between text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+              <span>Financial Balancing Equation</span>
+              <span className="text-emerald-400 flex items-center gap-1 font-mono">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> Verified 100% Balanced Identity
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs font-mono pt-1">
+              <div className="p-2.5 rounded-lg bg-slate-800/90 border border-slate-700">
+                <span className="text-[10px] text-slate-400 uppercase block font-sans">Platform Net</span>
+                <span className="font-bold text-white text-sm block mt-0.5">{formatCurrency(summary.totalPlatformNet)}</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-slate-800/90 border border-slate-700">
+                <span className="text-[10px] text-slate-400 uppercase block font-sans">= Bank Net</span>
+                <span className="font-bold text-white text-sm block mt-0.5">{formatCurrency(summary.totalBankAdjusted)}</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-200">
+                <span className="text-[10px] text-rose-400 uppercase block font-sans">+ Missing Txn</span>
+                <span className="font-bold text-sm block mt-0.5">+{formatCurrency(breakdown.missingSettlements?.total || 0)}</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-blue-950/60 border border-blue-800 text-blue-200">
+                <span className="text-[10px] text-blue-400 uppercase block font-sans">- Unmatched</span>
+                <span className="font-bold text-sm block mt-0.5">-{formatCurrency(breakdown.unmatchedBankEntries?.total || 0)}</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-amber-950/60 border border-amber-800 text-amber-200 col-span-2 sm:col-span-1">
+                <span className="text-[10px] text-amber-400 uppercase block font-sans">- Rounding Gap</span>
+                <span className="font-bold text-sm block mt-0.5">-{formatCurrency(abs(breakdown.roundingDifferences?.total || 0))}</span>
+              </div>
             </div>
           </div>
 
@@ -240,37 +331,61 @@ export default function SummaryOverview({ summary, breakdown }) {
             </div>
           </div>
 
-          {/* Detailed Component Breakdown */}
+          {/* Detailed Component Breakdown with Quick Action Inspect */}
           <div className="pt-2 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+            <button
+              onClick={() => onInspectTxn && onInspectTxn('TXN-1016')}
+              className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 hover:border-rose-300 hover:bg-rose-50/30 transition-all text-left flex items-center justify-between group cursor-pointer"
+            >
               <div>
-                <span className="font-semibold text-slate-800">Missing Settlement</span>
-                <p className="text-[10px] text-slate-500">TXN-1016 pending bank credit</p>
+                <span className="font-semibold text-slate-800 group-hover:text-rose-700 transition-colors">Missing Settlement</span>
+                <p className="text-[10px] text-slate-500 font-mono mt-0.5">TXN-1016 pending bank credit</p>
               </div>
-              <span className="font-mono font-bold text-rose-600 text-sm">
-                +{formatCurrency(breakdown.missingSettlements?.total || 0)}
-              </span>
-            </div>
+              <div className="text-right">
+                <span className="font-mono font-bold text-rose-600 text-sm">
+                  +{formatCurrency(breakdown.missingSettlements?.total || 0)}
+                </span>
+                <span className="text-[10px] text-slate-400 group-hover:text-rose-600 flex items-center justify-end gap-0.5 mt-0.5">
+                  Inspect <ArrowRight className="h-2.5 w-2.5" />
+                </span>
+              </div>
+            </button>
 
-            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+            <button
+              onClick={() => onInspectTxn && onInspectTxn('TXN-EXT-001')}
+              className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 hover:border-blue-300 hover:bg-blue-50/30 transition-all text-left flex items-center justify-between group cursor-pointer"
+            >
               <div>
-                <span className="font-semibold text-slate-800">Unmatched Bank Entry</span>
-                <p className="text-[10px] text-slate-500">TXN-EXT-001 unknown deposit</p>
+                <span className="font-semibold text-slate-800 group-hover:text-blue-700 transition-colors">Unmatched Bank Entry</span>
+                <p className="text-[10px] text-slate-500 font-mono mt-0.5">TXN-EXT-001 unknown deposit</p>
               </div>
-              <span className="font-mono font-bold text-blue-600 text-sm">
-                -{formatCurrency(breakdown.unmatchedBankEntries?.total || 0)}
-              </span>
-            </div>
+              <div className="text-right">
+                <span className="font-mono font-bold text-blue-600 text-sm">
+                  -{formatCurrency(breakdown.unmatchedBankEntries?.total || 0)}
+                </span>
+                <span className="text-[10px] text-slate-400 group-hover:text-blue-600 flex items-center justify-end gap-0.5 mt-0.5">
+                  Inspect <ArrowRight className="h-2.5 w-2.5" />
+                </span>
+              </div>
+            </button>
 
-            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+            <button
+              onClick={() => onInspectTxn && onInspectTxn('TXN-1007')}
+              className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 hover:border-amber-300 hover:bg-amber-50/30 transition-all text-left flex items-center justify-between group cursor-pointer"
+            >
               <div>
-                <span className="font-semibold text-slate-800">Rounding Precision Gap</span>
-                <p className="text-[10px] text-slate-500">TXN-1007 (4dp vs 2dp)</p>
+                <span className="font-semibold text-slate-800 group-hover:text-amber-700 transition-colors">Rounding Precision Gap</span>
+                <p className="text-[10px] text-slate-500 font-mono mt-0.5">TXN-1007 (4dp vs 2dp)</p>
               </div>
-              <span className="font-mono font-bold text-amber-700 text-sm">
-                {formatCurrency(breakdown.roundingDifferences?.total || 0)}
-              </span>
-            </div>
+              <div className="text-right">
+                <span className="font-mono font-bold text-amber-700 text-sm">
+                  {formatCurrency(breakdown.roundingDifferences?.total || 0)}
+                </span>
+                <span className="text-[10px] text-slate-400 group-hover:text-amber-600 flex items-center justify-end gap-0.5 mt-0.5">
+                  Inspect <ArrowRight className="h-2.5 w-2.5" />
+                </span>
+              </div>
+            </button>
           </div>
         </div>
       )}

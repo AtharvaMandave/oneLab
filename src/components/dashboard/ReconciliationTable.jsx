@@ -1,10 +1,10 @@
 /**
  * ReconciliationTable Component
  * High-performance, user-friendly transaction reconciliation table with quick pills,
- * search, sorting, copy-to-clipboard, pagination, and direct inspection.
+ * instant search, case shortcuts, sorting, copy-to-clipboard, pagination, and direct inspection.
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Search,
   ArrowUpDown,
@@ -17,14 +17,22 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  Sparkles,
+  Download,
 } from 'lucide-react';
 import StatusBadge from '../common/StatusBadge.jsx';
 import { RECONCILIATION_CONFIG } from '../../data/config.js';
+import { exportReconciliationCSV } from '../../utils/csvExport.js';
 
 const { statusLabels } = RECONCILIATION_CONFIG;
 
-export default function ReconciliationTable({ details, onRowClick }) {
-  const [search, setSearch] = useState('');
+export default function ReconciliationTable({
+  details,
+  onRowClick,
+  externalSearch = '',
+  onSearchChange,
+}) {
+  const [search, setSearch] = useState(externalSearch);
   const [quickFilter, setQuickFilter] = useState('ALL'); // 'ALL' | 'EXCEPTIONS' | 'MATCHED'
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [typeFilter, setTypeFilter] = useState('ALL');
@@ -33,6 +41,20 @@ export default function ReconciliationTable({ details, onRowClick }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [copiedId, setCopiedId] = useState(null);
+
+  // Sync with external search if changed from parent
+  useEffect(() => {
+    if (externalSearch !== undefined && externalSearch !== search) {
+      setSearch(externalSearch);
+      setCurrentPage(1);
+    }
+  }, [externalSearch]);
+
+  const handleSearchInput = (value) => {
+    setSearch(value);
+    setCurrentPage(1);
+    if (onSearchChange) onSearchChange(value);
+  };
 
   // Copy helper
   const handleCopy = (e, text, id) => {
@@ -120,7 +142,6 @@ export default function ReconciliationTable({ details, onRowClick }) {
     return filtered.slice(start, start + pageSize);
   }, [filtered, currentPage, pageSize]);
 
-  // Reset page when filters change
   const handleQuickFilterChange = (filter) => {
     setQuickFilter(filter);
     setCurrentPage(1);
@@ -136,11 +157,22 @@ export default function ReconciliationTable({ details, onRowClick }) {
   };
 
   const clearAllFilters = () => {
-    setSearch('');
+    handleSearchInput('');
     setQuickFilter('ALL');
     setStatusFilter('ALL');
     setTypeFilter('ALL');
     setCurrentPage(1);
+  };
+
+  const handleQuickCaseClick = (txnId) => {
+    if (search === txnId) {
+      handleSearchInput('');
+    } else {
+      setQuickFilter('ALL');
+      setStatusFilter('ALL');
+      setTypeFilter('ALL');
+      handleSearchInput(txnId);
+    }
   };
 
   const SortIcon = ({ field }) => {
@@ -180,7 +212,7 @@ export default function ReconciliationTable({ details, onRowClick }) {
               onClick={() => handleQuickFilterChange('ALL')}
               className={`px-3 py-1.5 rounded-lg transition-all ${
                 quickFilter === 'ALL'
-                  ? 'bg-white text-slate-900 shadow-xs font-bold'
+                  ? 'bg-white text-slate-900 shadow-2xs font-bold'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -190,7 +222,7 @@ export default function ReconciliationTable({ details, onRowClick }) {
               onClick={() => handleQuickFilterChange('EXCEPTIONS')}
               className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
                 quickFilter === 'EXCEPTIONS'
-                  ? 'bg-rose-500 text-white shadow-xs font-bold'
+                  ? 'bg-rose-500 text-white shadow-2xs font-bold'
                   : 'text-rose-700 hover:text-rose-900'
               }`}
             >
@@ -201,7 +233,7 @@ export default function ReconciliationTable({ details, onRowClick }) {
               onClick={() => handleQuickFilterChange('MATCHED')}
               className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
                 quickFilter === 'MATCHED'
-                  ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                  ? 'bg-emerald-600 text-white shadow-2xs font-bold'
                   : 'text-emerald-700 hover:text-emerald-900'
               }`}
             >
@@ -220,12 +252,12 @@ export default function ReconciliationTable({ details, onRowClick }) {
               type="text"
               placeholder="Search by ID, Bank Ref, Amount, or Reason..."
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+              onChange={(e) => handleSearchInput(e.target.value)}
               className="w-full pl-9 pr-9 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50/50 hover:bg-white focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             />
             {search && (
               <button
-                onClick={() => setSearch('')}
+                onClick={() => handleSearchInput('')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 rounded-full"
               >
                 <X className="h-3.5 w-3.5" />
@@ -261,6 +293,16 @@ export default function ReconciliationTable({ details, onRowClick }) {
             <option value="SETTLEMENT">Bank Settlements</option>
           </select>
 
+          {/* Quick Export Button */}
+          <button
+            onClick={() => exportReconciliationCSV(filtered)}
+            title="Export filtered records to CSV"
+            className="inline-flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+          >
+            <Download className="h-3.5 w-3.5 text-slate-500" />
+            <span className="hidden sm:inline">Export CSV</span>
+          </button>
+
           {/* Active Filter Clear */}
           {(search || quickFilter !== 'ALL' || statusFilter !== 'ALL' || typeFilter !== 'ALL') && (
             <button
@@ -270,6 +312,74 @@ export default function ReconciliationTable({ details, onRowClick }) {
               Reset Filters
             </button>
           )}
+        </div>
+
+        {/* Planted Test Cases Quick Jump Pills */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
+          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 mr-1">
+            <Sparkles className="h-3 w-3 text-amber-500" />
+            Quick Test Cases:
+          </span>
+          <button
+            onClick={() => handleQuickCaseClick('TXN-1020')}
+            className={`px-2 py-0.5 rounded-lg border text-[11px] font-medium transition-all ${
+              search === 'TXN-1020'
+                ? 'bg-amber-100 text-amber-900 border-amber-300 font-bold'
+                : 'bg-amber-50/70 text-amber-800 border-amber-200/80 hover:bg-amber-100'
+            }`}
+          >
+            Case A: Cross-Month (TXN-1020)
+          </button>
+          <button
+            onClick={() => handleQuickCaseClick('TXN-1007')}
+            className={`px-2 py-0.5 rounded-lg border text-[11px] font-medium transition-all ${
+              search === 'TXN-1007'
+                ? 'bg-amber-100 text-amber-900 border-amber-300 font-bold'
+                : 'bg-amber-50/70 text-amber-800 border-amber-200/80 hover:bg-amber-100'
+            }`}
+          >
+            Case B: Rounding (TXN-1007)
+          </button>
+          <button
+            onClick={() => handleQuickCaseClick('TXN-1003')}
+            className={`px-2 py-0.5 rounded-lg border text-[11px] font-medium transition-all ${
+              search === 'TXN-1003'
+                ? 'bg-rose-100 text-rose-900 border-rose-300 font-bold'
+                : 'bg-rose-50/70 text-rose-800 border-rose-200/80 hover:bg-rose-100'
+            }`}
+          >
+            Case C: Duplicate (TXN-1003)
+          </button>
+          <button
+            onClick={() => handleQuickCaseClick('REF-5099')}
+            className={`px-2 py-0.5 rounded-lg border text-[11px] font-medium transition-all ${
+              search === 'REF-5099'
+                ? 'bg-rose-100 text-rose-900 border-rose-300 font-bold'
+                : 'bg-rose-50/70 text-rose-800 border-rose-200/80 hover:bg-rose-100'
+            }`}
+          >
+            Case D: Orphan Refund (REF-5099)
+          </button>
+          <button
+            onClick={() => handleQuickCaseClick('TXN-1016')}
+            className={`px-2 py-0.5 rounded-lg border text-[11px] font-medium transition-all ${
+              search === 'TXN-1016'
+                ? 'bg-rose-100 text-rose-900 border-rose-300 font-bold'
+                : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+            }`}
+          >
+            Missing Settlement (TXN-1016)
+          </button>
+          <button
+            onClick={() => handleQuickCaseClick('TXN-EXT-001')}
+            className={`px-2 py-0.5 rounded-lg border text-[11px] font-medium transition-all ${
+              search === 'TXN-EXT-001'
+                ? 'bg-blue-100 text-blue-900 border-blue-300 font-bold'
+                : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+            }`}
+          >
+            Unmatched Bank (TXN-EXT-001)
+          </button>
         </div>
       </div>
 
@@ -299,8 +409,10 @@ export default function ReconciliationTable({ details, onRowClick }) {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {paginatedRows.map((row, i) => {
-              const hasDiff = row.difference !== '0.0000' && row.difference !== '0.00';
+              const diffNum = parseFloat(row.difference) || 0;
+              const hasDiff = Math.abs(diffNum) > 0.00001;
               const isException = row.status !== 'MATCHED';
+              const isFractional = row.platformAmount !== '—' && row.platformAmount.includes('.') && row.platformAmount.split('.')[1]?.length > 2;
 
               return (
                 <tr
@@ -376,7 +488,14 @@ export default function ReconciliationTable({ details, onRowClick }) {
 
                   {/* Platform Amount */}
                   <td className="px-4 py-3 whitespace-nowrap font-mono text-right font-medium text-slate-900">
-                    {row.platformAmount !== '—' ? `₹${parseFloat(row.platformAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}` : '—'}
+                    <div className="flex items-center justify-end gap-1">
+                      {row.platformAmount !== '—' ? `₹${parseFloat(row.platformAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}` : '—'}
+                      {isFractional && (
+                        <span className="text-[9px] font-bold px-1 rounded bg-amber-100 text-amber-800" title="Internal 4-decimal precision">
+                          4dp
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   {/* Bank Amount */}
@@ -386,9 +505,9 @@ export default function ReconciliationTable({ details, onRowClick }) {
 
                   {/* Difference */}
                   <td className={`px-4 py-3 whitespace-nowrap font-mono text-right font-semibold ${
-                    hasDiff ? 'text-rose-600' : 'text-slate-400'
+                    hasDiff ? (diffNum > 0 ? 'text-rose-600' : 'text-amber-600') : 'text-slate-400'
                   }`}>
-                    {hasDiff ? `₹${parseFloat(row.difference).toFixed(4)}` : '₹0.00'}
+                    {hasDiff ? `${diffNum > 0 ? '+' : ''}₹${diffNum.toFixed(4)}` : '₹0.00'}
                   </td>
 
                   {/* Status Badge */}
@@ -400,7 +519,7 @@ export default function ReconciliationTable({ details, onRowClick }) {
                   <td className="px-3 py-3 text-center">
                     <button
                       title="Inspect Transaction"
-                      className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                      className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
                     >
                       <Eye className="h-4 w-4" />
                     </button>
@@ -418,7 +537,7 @@ export default function ReconciliationTable({ details, onRowClick }) {
                     <p className="text-xs text-slate-400">Try adjusting your search terms or clearing your status filters.</p>
                     <button
                       onClick={clearAllFilters}
-                      className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                      className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors cursor-pointer"
                     >
                       Clear all filters
                     </button>
@@ -443,6 +562,11 @@ export default function ReconciliationTable({ details, onRowClick }) {
           </span>
           <span>of</span>
           <span className="font-semibold text-slate-900">{filtered.length} entries</span>
+          {filtered.length !== details.length && (
+            <span className="text-slate-400 font-normal">
+              (filtered from {details.length} total)
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-4">
@@ -452,7 +576,7 @@ export default function ReconciliationTable({ details, onRowClick }) {
             <select
               value={pageSize}
               onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-              className="px-2 py-1 rounded-md border border-slate-200 bg-white text-xs font-medium focus:outline-none"
+              className="px-2 py-1 rounded-md border border-slate-200 bg-white text-xs font-medium focus:outline-none cursor-pointer"
             >
               <option value={10}>10</option>
               <option value={25}>25</option>
@@ -466,7 +590,7 @@ export default function ReconciliationTable({ details, onRowClick }) {
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="p-1 rounded-md border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="p-1 rounded-md border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -476,7 +600,7 @@ export default function ReconciliationTable({ details, onRowClick }) {
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="p-1 rounded-md border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="p-1 rounded-md border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
               <ChevronRight className="h-4 w-4" />
             </button>

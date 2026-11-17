@@ -1,6 +1,7 @@
 /**
  * ExceptionDetail Component
- * User-friendly, side-by-side transaction comparison and investigation modal.
+ * User-friendly, side-by-side transaction comparison, lifecycle timeline,
+ * and root-cause resolution modal.
  */
 
 import { useState } from 'react';
@@ -16,6 +17,8 @@ import {
   Building2,
   Laptop,
   ArrowRight,
+  Clock,
+  Calendar,
 } from 'lucide-react';
 
 const { suggestedActions } = RECONCILIATION_CONFIG;
@@ -35,7 +38,7 @@ export default function ExceptionDetail({ isOpen, onClose, row }) {
   };
 
   const impactLabel = {
-    MATCHED: 'No impact — transactions are fully balanced and verified between systems.',
+    MATCHED: 'No impact — transactions are fully balanced and verified between platform and bank.',
     TIMING_DIFFERENCE: 'This settlement occurred in November 2026. It will automatically reconcile in the November reporting period and does not represent lost funds.',
     DUPLICATE: 'The duplicate entry inflates the raw bank total by the duplicate amount. It has been isolated and removed from the Adjusted Bank Total to prevent overstated ledger balances.',
     ROUNDING_DIFFERENCE: 'Arises from fractional unit pricing precision (platform 4 decimal places vs bank 2 decimal places). The sub-cent variance is well within configured tolerance (₹0.05).',
@@ -55,7 +58,7 @@ export default function ExceptionDetail({ isOpen, onClose, row }) {
               <h4 className="text-xl font-bold text-slate-900 font-mono">{row.transactionId}</h4>
               <button
                 onClick={() => handleCopy(row.transactionId, 'txnId')}
-                className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors"
+                className="p-1 text-slate-400 hover:text-blue-600 rounded transition-colors cursor-pointer"
                 title="Copy Transaction ID"
               >
                 {copiedField === 'txnId' ? (
@@ -68,6 +71,57 @@ export default function ExceptionDetail({ isOpen, onClose, row }) {
           </div>
           <div>
             <StatusBadge status={row.status} />
+          </div>
+        </div>
+
+        {/* Settlement Lifecycle Timeline */}
+        <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200 text-xs">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-3">
+            Settlement Lifecycle Timeline
+          </span>
+          <div className="relative flex items-center justify-between max-w-md mx-auto">
+            <div className="absolute left-10 right-10 top-3 h-0.5 bg-slate-200 -z-0" />
+            
+            {/* Step 1: Platform initiation */}
+            <div className="relative z-10 flex flex-col items-center text-center">
+              <div className={`h-6 w-6 rounded-full flex items-center justify-center font-bold text-[10px] ${
+                row.transactionDate !== '—' ? 'bg-blue-600 text-white shadow-2xs' : 'bg-slate-300 text-slate-600'
+              }`}>
+                1
+              </div>
+              <span className="font-semibold text-slate-800 mt-1">Platform</span>
+              <span className="text-[10px] font-mono text-slate-500">
+                {row.transactionDate !== '—' ? row.transactionDate : 'Not on platform'}
+              </span>
+            </div>
+
+            {/* Step 2: Processing window */}
+            <div className="relative z-10 flex flex-col items-center text-center">
+              <div className="h-6 w-6 rounded-full bg-white border border-slate-300 flex items-center justify-center text-slate-500 font-bold text-[10px] shadow-2xs">
+                <Clock className="h-3 w-3" />
+              </div>
+              <span className="font-semibold text-slate-700 mt-1">Processing</span>
+              <span className="text-[10px] text-slate-500">1–2 Business Days</span>
+            </div>
+
+            {/* Step 3: Bank Settlement */}
+            <div className="relative z-10 flex flex-col items-center text-center">
+              <div className={`h-6 w-6 rounded-full flex items-center justify-center font-bold text-[10px] shadow-2xs ${
+                row.settlementDate === '2026-11-02'
+                  ? 'bg-amber-500 text-white'
+                  : row.settlementDate !== '—'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-rose-500 text-white'
+              }`}>
+                {row.settlementDate !== '—' ? '3' : '!'}
+              </div>
+              <span className="font-semibold text-slate-800 mt-1">
+                {row.settlementDate !== '—' ? 'Settled' : 'Pending'}
+              </span>
+              <span className="text-[10px] font-mono text-slate-500">
+                {row.settlementDate !== '—' ? row.settlementDate : 'No Bank Credit'}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -123,7 +177,8 @@ export default function ExceptionDetail({ isOpen, onClose, row }) {
                   {row.bankRef !== '—' && (
                     <button
                       onClick={() => handleCopy(row.bankRef, 'bankRef')}
-                      className="text-slate-400 hover:text-blue-600"
+                      className="text-slate-400 hover:text-blue-600 cursor-pointer"
+                      title="Copy Bank Reference"
                     >
                       {copiedField === 'bankRef' ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
                     </button>
@@ -196,7 +251,7 @@ export default function ExceptionDetail({ isOpen, onClose, row }) {
         <div className="pt-2 flex justify-end">
           <button
             onClick={onClose}
-            className="px-5 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+            className="px-5 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
           >
             Close Inspector
           </button>

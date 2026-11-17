@@ -1,7 +1,7 @@
 /**
  * DataManagement Component
- * Modern file upload, sample CSV template generator, raw dataset search/inspector,
- * and demo data reset controls.
+ * Modern file upload, CSV schema reference, sample template generators,
+ * raw dataset search/inspector, and demo data reset controls.
  */
 
 import { useState } from 'react';
@@ -17,6 +17,10 @@ import {
   FileText,
   Search,
   Database,
+  HelpCircle,
+  ChevronDown,
+  ChevronUp,
+  Table,
 } from 'lucide-react';
 import Modal from '../common/Modal.jsx';
 import { parseCSVFile } from '../../utils/csvExport.js';
@@ -33,6 +37,7 @@ export default function DataManagement({
   onClearErrors,
 }) {
   const [viewModal, setViewModal] = useState(null); // 'platform' | 'bank' | null
+  const [showSchema, setShowSchema] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(null);
 
@@ -90,15 +95,68 @@ export default function DataManagement({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
-          <Database className="h-5 w-5 text-blue-600" />
-          Data Sources & Dataset Management
-        </h2>
-        <p className="text-xs text-slate-500 mt-0.5">
-          View loaded platform and bank records, upload custom CSV datasets, download templates, or reset to October 2026 demo data
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <Database className="h-5 w-5 text-blue-600" />
+            Data Sources & Dataset Management
+          </h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            View loaded platform and bank records, upload custom CSV datasets, download templates, or reset to October 2026 demo data
+          </p>
+        </div>
+        <button
+          onClick={() => setShowSchema(!showSchema)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl transition-all shadow-2xs self-start sm:self-center cursor-pointer"
+        >
+          <Table className="h-3.5 w-3.5 text-blue-600" />
+          <span>{showSchema ? 'Hide Schema Guide' : 'CSV Schema Reference'}</span>
+          {showSchema ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        </button>
       </div>
+
+      {/* Expandable CSV Schema Guide */}
+      {showSchema && (
+        <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4 animate-in fade-in duration-200">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">Supported CSV Schema Specifications</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Custom CSV files uploaded will be validated against these strict schemas using decimal-safe parsers:
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            {/* Platform Schema */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+              <span className="font-bold text-blue-700 flex items-center gap-1.5">
+                <FileText className="h-4 w-4" /> Platform Transactions Schema
+              </span>
+              <ul className="space-y-1 text-slate-600 font-mono text-[11px]">
+                <li><strong className="text-slate-900">transactionId</strong>: String, Unique ID (e.g. TXN-1001)</li>
+                <li><strong className="text-slate-900">type</strong>: PAYMENT | REFUND</li>
+                <li><strong className="text-slate-900">amount</strong>: Numeric (e.g. 12500.00 or 1499.9975, up to 4dp)</li>
+                <li><strong className="text-slate-900">timestamp</strong>: ISO-8601 Date (e.g. 2026-10-01T10:00:00)</li>
+                <li><strong className="text-slate-900">description</strong>: Text description (Optional)</li>
+                <li><strong className="text-slate-900">originalTransactionId</strong>: String (Required for REFUND)</li>
+              </ul>
+            </div>
+
+            {/* Bank Schema */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+              <span className="font-bold text-indigo-700 flex items-center gap-1.5">
+                <FileSpreadsheet className="h-4 w-4" /> Bank Settlements Schema
+              </span>
+              <ul className="space-y-1 text-slate-600 font-mono text-[11px]">
+                <li><strong className="text-slate-900">transactionRef</strong>: String, Platform Reference (e.g. TXN-1001)</li>
+                <li><strong className="text-slate-900">bankRef</strong>: String, Bank Settlement Ref (e.g. BNK-20261002-001)</li>
+                <li><strong className="text-slate-900">amount</strong>: Numeric (e.g. 12500.00, 2dp bank statement)</li>
+                <li><strong className="text-slate-900">settlementDate</strong>: ISO-8601 Date (e.g. 2026-10-02T10:00:00)</li>
+                <li><strong className="text-slate-900">description</strong>: Settlement description (Optional)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Dataset Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -121,7 +179,7 @@ export default function DataManagement({
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
             <button
               onClick={() => setViewModal('platform')}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors cursor-pointer"
             >
               <Eye className="h-3.5 w-3.5" />
               View Data
@@ -159,7 +217,7 @@ export default function DataManagement({
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
             <button
               onClick={() => setViewModal('bank')}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors cursor-pointer"
             >
               <Eye className="h-3.5 w-3.5" />
               View Data
@@ -196,14 +254,14 @@ export default function DataManagement({
           <div className="pt-2 border-t border-slate-100 flex flex-col gap-1.5">
             <button
               onClick={() => handleDownloadTemplate('platform')}
-              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer"
             >
               <Download className="h-3 w-3" />
               Platform CSV Template
             </button>
             <button
               onClick={() => handleDownloadTemplate('bank')}
-              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors"
+              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer"
             >
               <Download className="h-3 w-3" />
               Bank CSV Template
@@ -219,7 +277,7 @@ export default function DataManagement({
                 <RotateCcw className="h-5 w-5" />
               </div>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">
-                Test Assessment Data
+                Assessment Data
               </span>
             </div>
             <h3 className="text-sm font-bold text-slate-900">Reset Demo Data</h3>
@@ -231,7 +289,7 @@ export default function DataManagement({
           <div className="pt-2 border-t border-amber-200">
             <button
               onClick={() => { onReset(); setUploadSuccess(null); }}
-              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-amber-900 bg-amber-200 hover:bg-amber-300 rounded-lg transition-colors"
+              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-amber-900 bg-amber-200 hover:bg-amber-300 rounded-lg transition-colors cursor-pointer"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               Restore Assessment Dataset
@@ -249,7 +307,7 @@ export default function DataManagement({
               {uploadSuccess === 'platform' ? 'Platform transactions' : 'Bank settlements'} uploaded and validated successfully! Reconciliation has been recalculated dynamically.
             </span>
           </div>
-          <button onClick={() => setUploadSuccess(null)} className="text-emerald-500 hover:text-emerald-700">
+          <button onClick={() => setUploadSuccess(null)} className="text-emerald-500 hover:text-emerald-700 cursor-pointer">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -262,7 +320,7 @@ export default function DataManagement({
               <AlertCircle className="h-4 w-4 text-rose-600" />
               <span>Upload Validation Failed ({uploadErrors.errors.length} issue{uploadErrors.errors.length > 1 ? 's' : ''})</span>
             </div>
-            <button onClick={onClearErrors} className="text-rose-500 hover:text-rose-700">
+            <button onClick={onClearErrors} className="text-rose-500 hover:text-rose-700 cursor-pointer">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -329,7 +387,7 @@ function SearchableDataTable({ data, type }) {
       {/* Table */}
       <div className="overflow-x-auto rounded-xl border border-slate-200 max-h-[60vh] overflow-y-auto">
         <table className="w-full text-xs text-left">
-          <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 shadow-xs z-10">
+          <thead className="sticky top-0 bg-slate-50 border-b border-slate-200 shadow-2xs z-10">
             <tr>
               {columns.map(col => (
                 <th key={col} className="px-3 py-2.5 font-bold text-slate-600 uppercase text-[10px] tracking-wider whitespace-nowrap">

@@ -505,6 +505,7 @@ function buildDetailRows(platformRecords, uniqueBank, matchResults, duplicates, 
       statusLabel: RECONCILIATION_CONFIG.statusLabels[result.status],
       reason: result.reason,
       type: result.type,
+      originalTransactionId: result.originalTransactionId,
     });
   }
 
